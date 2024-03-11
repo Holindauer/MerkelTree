@@ -15,8 +15,7 @@ const uint32_t SHA256::k[64] = {
 };
 
 /**
- * @note read512Bits()
- * Reads 512 bits (64 bytes) from a file and stores them in a byte array.
+ * @note read512Bits() reads 512 bits (64 bytes) from a file and stores them in a byte array.
  * @param file Reference to an open ifstream from which to read the data.
  * @return A vector of unsigned char containing the read bytes.
  */
@@ -26,4 +25,75 @@ vector<unsigned char> SHA256::read512Bits(ifstream &file) {
     file.read(reinterpret_cast<char*>(&block[0]), 64); // Cast to char* for compatibility with read()
 
     return block;
+}
+
+/**
+ * @note Processes the given file, reads in 512-bit chunks, and applies padding if necessary.
+ * @param filename Path to the file to be processed.
+ */
+void SHA256::processFile(const string& filename) {
+
+    // Open the file in binary mode
+    ifstream file(filename, ios::binary);
+    if (!file) {
+        cerr << "Failed to open file: " << filename << endl;
+        return;
+    }
+
+    // block of 512 bit chunks from file
+    vector<unsigned char> block;
+    uint64_t totalLength = 0; // track len in bits
+
+    // Read the file in 512-bit chunks
+    while (file.good()) {
+
+        // read 512 bits from file and determine the number of bytes read
+        block = read512Bits(file);
+        size_t bytesRead = file.gcount();
+        totalLength += bytesRead * 8; 
+
+        // Check if this is the last chunk
+        if (bytesRead < 64) { 
+            applyPadding(block, totalLength);
+    
+            // Process padded block here (e.g., hash it)
+
+            break;
+        }
+
+        // Process block here (e.g., hash it)
+    }
+
+    file.close();
+}
+
+/**
+ * @note Applies the SHA-256 padding to the last block of the message. This process includes appending a single '1' bit,
+ * followed by '0' bits, such that the total length (including padding) becomes congruent to 448 mod 512. The final
+ * 64 bits of the block encode the total message length in big-endian format, ensuring compliance with SHA-256 specs.
+ * This guarantees that the padded message's length is a multiple of 512 bits, a prerequisite for SHA-256 processing.
+ * @param block The last (or only) block of data read from the file, to be padded.
+ * @param totalLength The total length of the message in bits, used for encoding in the padding.
+ */
+void SHA256::applyPadding(vector<unsigned char>& block, uint64_t totalLength) {
+    size_t originalSize = block.size();
+
+    // Add the '1' bit
+    if (originalSize < 64) {
+        block.push_back(0x80); // 0x80 = 10000000 in binary
+    }
+
+    // Pad with '0' bits
+    while (block.size() < 64) {
+        block.push_back(0x00);
+    }
+
+    // Overwrite the last 8 bytes with the total message length in bits
+    for (int i = 0; i < 8; i++) {
+
+        // Big endian format is computed by shifting right by 56, 48, 40, 32, 24, 16, 8, 0 then mask
+        // with 0xFF (0b11111111) to get the last 8 bits (1 byte) of the total length. Each byte mask
+        // is then stored in the last 8 bytes of the block, starting from index 56.
+        block[56 + i] = (totalLength >> (56 - i * 8)) & 0xFF;
+    }
 }

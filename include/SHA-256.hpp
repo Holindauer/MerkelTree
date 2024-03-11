@@ -19,8 +19,12 @@ class SHA256 {
         // Destructor
         ~SHA256() = default;
 
-        // Methods for reading files
+        // reading from files
         vector<unsigned char> read512Bits(ifstream &file);
+
+        // pre hash processing
+        void processFile(const std::string& filename);
+        void applyPadding(vector<unsigned char>& block, uint64_t totalLength);
 
     private:
 
