@@ -2,7 +2,10 @@
 
 // test_SHA-256.cpp
 
-
+/**
+ * @test read512Bits() reads 512 bits (64 bytes) from a file and stores them in a byte 
+ * array ensuring that the file content is read correctly.
+ */ 
 void test_read512Bits() {
 
     // Step 1: Create a test file with known pattern
@@ -51,11 +54,47 @@ void test_read512Bits() {
     std::remove(filename.c_str());
 }
 
-// Your SHA256 class definition and read512Bits method implementation here
+/**
+ * @test test_applyPadding() ensures that the applyPadding method correctly applies 
+ * the SHA-256 padding specifications to the last block of the message.
+ * 
+*/
+// Test function to verify padding behavior
+void test_applyPadding() {
 
+    std::vector<unsigned char> block; // Test block
+    
+    // Test cases with different original sizes
+    std::vector<size_t> originalSizes = {0, 1, 55, 56, 57, 63, 64, 65, 120};
+
+    SHA256 sha256; // Create an instance of the SHA256 class
+    
+    for (size_t originalSize : originalSizes) {
+
+        // Fill the block with some data up to originalSize
+        block.clear();
+        for (size_t i = 0; i < originalSize; ++i) {
+            block.push_back(static_cast<unsigned char>(i % 256)); // Arbitrary data
+        }
+
+        // Convert total length to bits
+        uint64_t totalLength = block.size() * 8;
+
+        // Apply padding to make the block len a multiple of 512 bits 
+        sha256.applyPadding(block, totalLength);
+
+        // Check if the padded block size is a multiple of 64 bytes
+        assert((block.size() % 64) == 0);
+    }
+
+    std::cout << "All tests passed!" << std::endl;
+}
+
+
+// test driver
 int main() {
-    // Run the test
     test_read512Bits();
+    test_applyPadding();
     return 0;
 }
 

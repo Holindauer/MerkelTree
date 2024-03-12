@@ -76,24 +76,38 @@ void SHA256::processFile(const string& filename) {
  * @param totalLength The total length of the message in bits, used for encoding in the padding.
  */
 void SHA256::applyPadding(vector<unsigned char>& block, uint64_t totalLength) {
+
+    // Original size in bytes
     size_t originalSize = block.size();
 
-    // Add the '1' bit
-    if (originalSize < 64) {
-        block.push_back(0x80); // 0x80 = 10000000 in binary
+    // Calculate how many bytes we need to add to include the '1' bit and reach a size
+    // that leaves exactly 8 bytes available for the total length encoding.
+    size_t paddingSize = 64 - ((originalSize + 8) % 64);
+
+    // Ensure there's space for at least one bit of padding ('1') by adding 64 bytes
+    // If true, the block will become 128 bytes long, which is technically two blocks
+    if (paddingSize < 1) {
+        paddingSize += 64; 
     }
 
-    // Pad with '0' bits
-    while (block.size() < 64) {
+    // appened the '1'  bit followed by '0' bits (0x80 == 10000000)
+    block.push_back(0x80); 
+    
+    // Append the '0' bits (0x00 == 00000000)
+    for (size_t i = 1; i < paddingSize; ++i) {
         block.push_back(0x00);
     }
 
-    // Overwrite the last 8 bytes with the total message length in bits
-    for (int i = 0; i < 8; i++) {
+    // Ensure the block is the correct size before adding the length
+    assert(block.size() == originalSize + paddingSize);
+
+    // Add the total message length in bits at the end of the padding
+    for (int i = 7; i >= 0; --i) {
 
         // Big endian format is computed by shifting right by 56, 48, 40, 32, 24, 16, 8, 0 then mask
         // with 0xFF (0b11111111) to get the last 8 bits (1 byte) of the total length. Each byte mask
         // is then stored in the last 8 bytes of the block, starting from index 56.
-        block[56 + i] = (totalLength >> (56 - i * 8)) & 0xFF;
+        block.push_back((totalLength >> (i * 8)) & 0xFF);
     }
 }
+
