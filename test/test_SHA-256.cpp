@@ -52,6 +52,8 @@ void test_read512Bits() {
 
     // Clean up: Remove the test file
     std::remove(filename.c_str());
+
+    cout << "test_read512Bits()...Pass!" << endl;
 }
 
 /**
@@ -87,14 +89,39 @@ void test_applyPadding() {
         assert((block.size() % 64) == 0);
     }
 
-    std::cout << "All tests passed!" << std::endl;
+    std::cout << "test_applyPadding()...Pass!" << std::endl;
 }
+
+/**
+ * @test test_bitwiseManipulations() tests the bitwise manipulation functions 
+ * used in the SHA-256 algorithm.
+ 
+*/
+void test_bitwiseManipulations() {
+
+    // instantiate SHA256 class
+    SHA256 sha256;
+
+    // Testing rightRotate
+    assert(sha256.rightRotate(2, 0b10110000) == 0b00101100);
+    assert(sha256.Choice(0b1010, 0b1100, 0b0110) == 0b1100);
+    assert(sha256.Majority(0b1010, 0b1100, 0b0110) == 0b1110);    
+    assert(sha256.Sigma0(0b00100010) == (sha256.rightRotate(2, 0b00100010) ^ sha256.rightRotate(13, 0b00100010) ^ sha256.rightRotate(22, 0b00100010)));
+    assert(sha256.Sigma1(0b11000110) == (sha256.rightRotate(6, 0b11000110) ^ sha256.rightRotate(11, 0b11000110) ^ sha256.rightRotate(25, 0b11000110)));
+    assert(sha256.sigma0(0b10101010) == (sha256.rightRotate(7, 0b10101010) ^ sha256.rightRotate(18, 0b10101010) ^ (0b10101010 >> 3)));
+    assert(sha256.sigma1(0b01010101) == (sha256.rightRotate(17, 0b01010101) ^ sha256.rightRotate(19, 0b01010101) ^ (0b01010101 >> 10)));
+    
+    std::cout << "test_bitwiseManipulations()...Pass!" << std::endl;
+}
+
 
 
 // test driver
 int main() {
     test_read512Bits();
     test_applyPadding();
+    test_bitwiseManipulations();
+
     return 0;
 }
 

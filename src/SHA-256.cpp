@@ -111,3 +111,5 @@ void SHA256::applyPadding(vector<unsigned char>& block, uint64_t totalLength) {
     }
 }
 
+
+
