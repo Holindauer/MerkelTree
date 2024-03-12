@@ -13,10 +13,8 @@ class SHA256 {
 
     public:
 
-        // Constructor
+        // Constructor --- Destructor
         SHA256() = default;
-
-        // Destructor
         ~SHA256() = default;
 
         // reading from files
@@ -25,6 +23,10 @@ class SHA256 {
         // pre hash processing
         void processFile(const std::string& filename);
         void applyPadding(vector<unsigned char>& block, uint64_t totalLength);
+
+        // hash computation funcs
+        void processBlock(const std::vector<unsigned char>& block);
+        std::string getDigest() const;
 
         // bit manipulations for SHA-256 
         /**
@@ -94,18 +96,20 @@ class SHA256 {
 
     private:
 
-        // hash values: (first 32 bits of the fractional parts of the square roots of the first 8 primes 2..19):
-        uint32_t h0 = 0x6a09e667;
-        uint32_t h1 = 0xbb67ae85;
-        uint32_t h2 = 0x3c6ef372;
-        uint32_t h3 = 0xa54ff53a;
-        uint32_t h4 = 0x510e527f;
-        uint32_t h5 = 0x9b05688c;
-        uint32_t h6 = 0x1f83d9ab;
-        uint32_t h7 = 0x5be0cd19;
+        // initial hash values: (first 32 bits of the fractional parts of the square roots of the first 8 primes 2..19):
+        const uint32_t h0 = 0x6a09e667;
+        const uint32_t h1 = 0xbb67ae85;
+        const uint32_t h2 = 0x3c6ef372;
+        const uint32_t h3 = 0xa54ff53a;
+        const uint32_t h4 = 0x510e527f;
+        const uint32_t h5 = 0x9b05688c;
+        const uint32_t h6 = 0x1f83d9ab;
+        const uint32_t h7 = 0x5be0cd19;
+
+        // hash values (non constant, for use in the hash computation)
+        uint32_t _h[8] = {h0, h1, h2, h3, h4, h5, h6, h7};
 
         // array of round constants (initialized outside class def)
         static const uint32_t k[64];
-
 };
 

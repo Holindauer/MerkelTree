@@ -8,6 +8,9 @@
 #include <vector> 
 #include <cstdint>
 #include <cassert> 
+#include <array>
+#include <sstream>
+#include <iomanip> // for std::setw and std::setfill
 
 // namespace includes
 using std::ifstream;

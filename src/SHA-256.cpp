@@ -56,16 +56,103 @@ void SHA256::processFile(const string& filename) {
         if (bytesRead < 64) { 
             applyPadding(block, totalLength);
     
-            // Process padded block here (e.g., hash it)
-
-            break;
+            // check if block is 128 bytes, split into two 64 byte blocks and process each (This will  
+            // happen if last block is between 57 and 64 bytes bc padding will extend it to 128 bytes)
+            if (block.size() == 128) {
+                vector<unsigned char> block1(block.begin(), block.begin() + 64);
+                vector<unsigned char> block2(block.begin() + 64, block.end());
+                processBlock(block1);
+                processBlock(block2);
+            } else {
+                processBlock(block);
+                break;
+            }
         }
 
-        // Process block here (e.g., hash it)
+        // Process block into hash value
+        processBlock(block);
+
+    } file.close();
+
+    // final hash value 
+    string digest = getDigest();
+}
+
+/**
+ * @note processBlock() applies the 'rolling hash function' to a 512-bit block of data. The block is divided into 16
+ * 32-bit words, which are then extended into 64 32-bit words using a message schedule array. The extended words are
+ * then used to update the hash value through a series of bitwise operations and additions. The final hash value is
+ * then used to update the current hash value. 
+*/
+void SHA256::processBlock(const std::vector<unsigned char>& block) {
+    assert(block.size() == 64); // Ensure the block is 512 bits (64 bytes)
+
+    // Init message schedule array
+    std::array<uint32_t, 64> msgSched = {0};
+
+    // Copy the first 16 words directly from the block into the message schedule array
+    for (size_t i = 0; i < 16; ++i) {
+
+        // Big endian format computed by shifting left by 24, 16, 8, 0 then mask with 0xFF (0b11111111)
+        msgSched[i] = (block[i*4] << 24) | (block[i*4 + 1] << 16) | (block[i*4 + 2] << 8) | (block[i*4 + 3]);
     }
 
-    file.close();
+    // Extend the first 16 words into the remaining 48 words of the message schedule array
+    for (size_t i = 16; i < 64; ++i) {
+        uint32_t s0 = sigma0(msgSched[i-15]);
+        uint32_t s1 = sigma1(msgSched[i-2]);
+        msgSched[i] = msgSched[i-16] + s0 + msgSched[i-7] + s1;
+    }
+
+    // Initialize working variables with current hash value
+    uint32_t a = _h[0], b = _h[1], c = _h[2], d = _h[3], 
+             e = _h[4], f = _h[5], g = _h[6], h = _h[7];
+
+    // Compression function main loop
+    for (size_t i = 0; i < 64; ++i) {
+
+        // Compute next working variables' state
+        uint32_t S1 = Sigma1(e);
+        uint32_t ch = Choice(e, f, g);
+        uint32_t temp1 = h + S1 + ch + k[i] + msgSched[i];
+        uint32_t S0 = Sigma0(a);
+        uint32_t maj = Majority(a, b, c);
+        uint32_t temp2 = S0 + maj;
+
+        // Update the working variables
+        h = g;
+        g = f;
+        f = e;
+        e = d + temp1;
+        d = c;
+        c = b;
+        b = a;
+        a = temp1 + temp2;
+    }
+
+    // Add the compressed chunk to the current hash value
+    _h[0] += a; _h[1] += b; _h[2] += c; _h[3] += d;
+    _h[4] += e; _h[5] += f; _h[6] += g; _h[7] += h;
 }
+
+/**
+ * @note getDigest() returns the final hash value as a string of hexadecimal 
+ * characters by combining the 8 32-bit words of the hash value.
+*/
+string SHA256::getDigest() const {
+
+    std::ostringstream result;
+
+    for(int i = 0; i < 8; i++) { // Loop through the final hash values
+
+        // Convert the hash value to a hex string and append it to the result
+        // (A hex string is a string representation of a number in base 16.)
+        result << std::hex << std::setfill('0') << std::setw(8) << _h[i];
+    }
+
+    return result.str();
+}
+
 
 /**
  * @note Applies the SHA-256 padding to the last block of the message. This process includes appending a single '1' bit,
