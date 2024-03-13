@@ -17,17 +17,20 @@ class SHA256 {
         SHA256() = default;
         ~SHA256() = default;
 
-        // reading from files
-        vector<unsigned char> read512Bits(ifstream &file);
+        // IO
+        vector<bool> SHA256::readFileBits(const string& fileName);
 
-        // pre hash processing
-        void processFile(const std::string& filename);
-        void applyPadding(vector<unsigned char>& block, uint64_t totalLength);
+        // Preprocessing
+        vector<unsigned char> bitToByteVector(const vector<bool>& bitVec);
+        void SHA256::computeBigEndian(size_t size, vector<bool>& bitVec);
+        void SHA256::applyPadding(vector<bool>& byteArr);
 
-        // hash computation funcs
-        void processBlock(const std::vector<unsigned char>& block);
-        std::string getDigest() const;
+        // Hash Computation
+        void SHA256::hashBits(vector<bool>& bitVec);
+        void SHA256::processBlock(const std::vector<unsigned char>& byteBlock);
+        string SHA256::getDigest() const;
 
+        
         // bit manipulations for SHA-256 
         /**
          * @note A right rotation bit manipulation shifts bits to the right a set number of times.
@@ -97,19 +100,19 @@ class SHA256 {
     private:
 
         // initial hash values: (first 32 bits of the fractional parts of the square roots of the first 8 primes 2..19):
-        const uint32_t h0 = 0x6a09e667;
-        const uint32_t h1 = 0xbb67ae85;
-        const uint32_t h2 = 0x3c6ef372;
-        const uint32_t h3 = 0xa54ff53a;
-        const uint32_t h4 = 0x510e527f;
-        const uint32_t h5 = 0x9b05688c;
-        const uint32_t h6 = 0x1f83d9ab;
-        const uint32_t h7 = 0x5be0cd19;
+            const uint32_t h0 = 0x6a09e667;
+            const uint32_t h1 = 0xbb67ae85;
+            const uint32_t h2 = 0x3c6ef372;
+            const uint32_t h3 = 0xa54ff53a;
+            const uint32_t h4 = 0x510e527f;
+            const uint32_t h5 = 0x9b05688c;
+            const uint32_t h6 = 0x1f83d9ab;
+            const uint32_t h7 = 0x5be0cd19;
 
-        // hash values (non constant, for use in the hash computation)
-        uint32_t _h[8] = {h0, h1, h2, h3, h4, h5, h6, h7};
+            // hash values (non constant, for use in the hash computation)
+            uint32_t _h[8] = {h0, h1, h2, h3, h4, h5, h6, h7};
 
-        // array of round constants (initialized outside class def)
-        static const uint32_t k[64];
+            // array of round constants (initialized outside class def)
+            static const uint32_t k[64];
 };
 

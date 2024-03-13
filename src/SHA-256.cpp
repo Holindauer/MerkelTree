@@ -15,77 +15,148 @@ const uint32_t SHA256::k[64] = {
 };
 
 /**
- * @note read512Bits() reads 512 bits (64 bytes) from a file and stores them in a byte array.
- * @param file Reference to an open ifstream from which to read the data.
- * @return A vector of unsigned char containing the read bytes.
- */
-vector<unsigned char> SHA256::read512Bits(ifstream &file) {
-    
-    std::vector<unsigned char> block(64); // 512 bits = 64 bytes
-    file.read(reinterpret_cast<char*>(&block[0]), 64); // Cast to char* for compatibility with read()
+ * @note readFileBits() reads all bits  from a file and stores them in a bit vector.
+*/
+vector<bool> SHA256::readFileBits(const string& fileName) {
 
-    return block;
+    // open file
+    ifstream file(fileName, ios::binary); 
+    assert(file.good());
+
+    vector<bool> bitArr;
+        
+    while (file.good()) {
+
+        // Read 64 bytes from the file into a buffer
+        vector<unsigned char> buffer(64); 
+        file.read(reinterpret_cast<char*>(&buffer[0]), buffer.size());
+        
+        // Iterate through the bytes in the buffer
+        for (int i = 0; i < file.gcount(); ++i) {
+
+            // iterate backwards through the bits of the current byte
+            for (int j = 7; j >= 0; --j) {
+
+                // Push the bits of the current byte onto the bit vector by
+                // shifting the bits to the right and masking with 1
+                bitArr.push_back((buffer[i] >> j) & 1);
+            }
+        }
+    }
+
+     return bitArr; 
 }
 
 /**
- * @note Processes the given file, reads in 512-bit chunks, and applies padding if necessary.
- * @param filename Path to the file to be processed.
- */
-void SHA256::processFile(const string& filename) {
+ * @helper bitToByteVector() converts a bit vector (represented as vec of bools) to a byte vector.
+*/
+vector<unsigned char> bitToByteVector(const vector<bool>& bitVec) {
 
-    // Open the file in binary mode
-    ifstream file(filename, ios::binary);
-    if (!file) {
-        cerr << "Failed to open file: " << filename << endl;
-        return;
-    }
+    vector<unsigned char> byteVec;
+    unsigned char currentByte = 0; // temp for bit/btye conversion
 
-    // block of 512 bit chunks from file
-    vector<unsigned char> block;
-    uint64_t totalLength = 0; // track len in bits
+    // iterate bits in bit vector
+    for (size_t i = 0; i < bitVec.size(); ++i) {
 
-    // Read the file in 512-bit chunks
-    while (file.good()) {
+        // if the i'th bit is true, set the corresponding bit to '1' in the current byte
+        if (bitVec[i]) {    
 
-        // read 512 bits from file and determine the number of bytes read
-        block = read512Bits(file);
-        size_t bytesRead = file.gcount();
-        totalLength += bytesRead * 8; 
-
-        // Check if this is the last chunk
-        if (bytesRead < 64) { 
-            applyPadding(block, totalLength);
-    
-            // check if block is 128 bytes, split into two 64 byte blocks and process each (This will  
-            // happen if last block is between 57 and 64 bytes bc padding will extend it to 128 bytes)
-            if (block.size() == 128) {
-                vector<unsigned char> block1(block.begin(), block.begin() + 64);
-                vector<unsigned char> block2(block.begin() + 64, block.end());
-                processBlock(block1);
-                processBlock(block2);
-            } else {
-                processBlock(block);
-                break;
-            }
+            // (1 << (7 - (i % 8))) calculates how many positions away from the LSB the '1' should be placed in
+            // the current byte. The placement itself is done at that position with the bitwise OR operation.
+            currentByte |= (1 << (7 - (i % 8)));
         }
 
-        // Process block into hash value
-        processBlock(block);
+        // Every 8 bits, push the current byte to the byte vector and reset
+        if (i % 8 == 7) {
+            byteVec.push_back(currentByte);
+            currentByte = 0; 
+        }
+    }
 
-    } file.close();
+    // Handle any remaining bits if bitVec.size() is not a multiple of 8
+    if (bitVec.size() % 8 != 0) {
+        byteVec.push_back(currentByte);
+    }
 
-    // final hash value 
-    string digest = getDigest();
+    return byteVec;
 }
+
+/**
+ * @helper computeBigEndianBits() computes the big endian representation of a size_t and stores it in a bit vector.
+ * @param size The size_t to convert to big endian.
+ * @param endianVec The bit vector to store the big endian representation in.
+*/
+void SHA256::computeBigEndian(size_t size, vector<bool>& endianVec) {
+
+    // iterate from MSB, fill endianVec with the bits of 'size'
+    for (int i = 63; i >= 0; --i) {
+
+        // Extract each bit by shifting 'size' right by 'i' positions and isolate the LSB
+        bool bit = (size >> i) & 1;
+
+        // populate bit vector from MSB to LSB
+        endianVec[63 - i] = bit;
+    }
+}
+
+
+/**
+ * @note applyPadding() pads a vector of bits (represented as a vector of bools) to a len that is a multiple of 512 bits
+*/
+void SHA256::applyPadding(vector<bool>& bitVec) {
+
+    // Pad with a '1' bit
+    bitVec.push_back(true);
+
+    uint padLen = 512 - bitVec.size() - 64; // 64 for the length of the original message
+
+    // compute big endian len of bitVec
+    vector<bool> lenBitsBigEndian(64, false);
+    computeBigEndian(bitVec.size(), lenBitsBigEndian);
+
+    // pad with 0's
+    for (uint i = 0; i < padLen; ++i) { bitVec.push_back(false); }
+
+    // append the big endian len of bitVec
+    bitVec.insert(bitVec.end(), lenBitsBigEndian.begin(), lenBitsBigEndian.end());
+
+    assert(bitVec.size() % 512 == 0);
+}
+
+
+/**
+ * @note hashBytes() applies the SHA-256 hashing algorithm to a vector of bytes. The bytes are padded if the length
+ * of the byte vector is not a multiple of 64. 
+*/
+void SHA256::hashBits(vector<bool>& bitVec){
+
+    // check if arr len is a multple of 64x
+    if (bitVec.size() % 64 != 0) {
+        applyPadding(bitVec);
+    }
+    
+    // convert bit vector to byte vector
+    vector<unsigned char> byteVec = bitToByteVector(bitVec);
+
+    // iterate through the byte vector in 512-bit blocks
+    for (size_t i = 0; i < byteVec.size(); i += 64) {
+
+        // process each 512-bit block
+        processBlock(vector<unsigned char>(byteVec.begin() + i, byteVec.begin() + i + 64));
+    
+
+}
+
 
 /**
  * @note processBlock() applies the 'rolling hash function' to a 512-bit block of data. The block is divided into 16
  * 32-bit words, which are then extended into 64 32-bit words using a message schedule array. The extended words are
  * then used to update the hash value through a series of bitwise operations and additions. The final hash value is
  * then used to update the current hash value. 
+ * @
 */
-void SHA256::processBlock(const std::vector<unsigned char>& block) {
-    assert(block.size() == 64); // Ensure the block is 512 bits (64 bytes)
+void SHA256::processBlock(const std::vector<unsigned char>& byteBlock) {
+    assert(byteBlock.size() == 64); // Ensure the block is 512 bits (64 bytes)
 
     // Init message schedule array
     std::array<uint32_t, 64> msgSched = {0};
@@ -94,7 +165,7 @@ void SHA256::processBlock(const std::vector<unsigned char>& block) {
     for (size_t i = 0; i < 16; ++i) {
 
         // Big endian format computed by shifting left by 24, 16, 8, 0 then mask with 0xFF (0b11111111)
-        msgSched[i] = (block[i*4] << 24) | (block[i*4 + 1] << 16) | (block[i*4 + 2] << 8) | (block[i*4 + 3]);
+        msgSched[i] = (byteBlock[i*4] << 24) | (byteBlock[i*4 + 1] << 16) | (byteBlock[i*4 + 2] << 8) | (byteBlock[i*4 + 3]);
     }
 
     // Extend the first 16 words into the remaining 48 words of the message schedule array
@@ -153,50 +224,6 @@ string SHA256::getDigest() const {
     return result.str();
 }
 
-
-/**
- * @note Applies the SHA-256 padding to the last block of the message. This process includes appending a single '1' bit,
- * followed by '0' bits, such that the total length (including padding) becomes congruent to 448 mod 512. The final
- * 64 bits of the block encode the total message length in big-endian format, ensuring compliance with SHA-256 specs.
- * This guarantees that the padded message's length is a multiple of 512 bits, a prerequisite for SHA-256 processing.
- * @param block The last (or only) block of data read from the file, to be padded.
- * @param totalLength The total length of the message in bits, used for encoding in the padding.
- */
-void SHA256::applyPadding(vector<unsigned char>& block, uint64_t totalLength) {
-
-    // Original size in bytes
-    size_t originalSize = block.size();
-
-    // Calculate how many bytes we need to add to include the '1' bit and reach a size
-    // that leaves exactly 8 bytes available for the total length encoding.
-    size_t paddingSize = 64 - ((originalSize + 8) % 64);
-
-    // Ensure there's space for at least one bit of padding ('1') by adding 64 bytes
-    // If true, the block will become 128 bytes long, which is technically two blocks
-    if (paddingSize < 1) {
-        paddingSize += 64; 
-    }
-
-    // appened the '1'  bit followed by '0' bits (0x80 == 10000000)
-    block.push_back(0x80); 
-    
-    // Append the '0' bits (0x00 == 00000000)
-    for (size_t i = 1; i < paddingSize; ++i) {
-        block.push_back(0x00);
-    }
-
-    // Ensure the block is the correct size before adding the length
-    assert(block.size() == originalSize + paddingSize);
-
-    // Add the total message length in bits at the end of the padding
-    for (int i = 7; i >= 0; --i) {
-
-        // Big endian format is computed by shifting right by 56, 48, 40, 32, 24, 16, 8, 0 then mask
-        // with 0xFF (0b11111111) to get the last 8 bits (1 byte) of the total length. Each byte mask
-        // is then stored in the last 8 bytes of the block, starting from index 56.
-        block.push_back((totalLength >> (i * 8)) & 0xFF);
-    }
-}
 
 
 
