@@ -8,7 +8,7 @@
 */
 void test_hashInputStrings(void){  
 
-    // instantiate merkel tree class
+    // instantiate merkel tree and sha classes
     MerkelTree merkelTree = MerkelTree();
     SHA256 sha256 = SHA256();
 
@@ -16,7 +16,7 @@ void test_hashInputStrings(void){
     vector<string> inputs = {"Hello", "World", "!"};
 
     // hash inputs
-    vector<string> hashes = merkelTree.hashInputStrings(inputs);
+    vector<string> hashes = merkelTree.hashStrings(inputs);
 
     // assert hashes in output vector match hash computaiton from sha256
     for (int i=0; i<inputs.size(); i++){
@@ -26,8 +26,36 @@ void test_hashInputStrings(void){
     cout << "test_hashLeafNodes()...Pass!" << endl;
 }
 
+/**
+ * @test test_pairHashes() checks to make sure that hashes are being paired up and appended 
+ * when pairHashes() is called 
+*/
+void test_pairHashes(){
+
+    // instantiate merkel tree and sha classes
+    MerkelTree merkelTree = MerkelTree();
+    SHA256 sha256 = SHA256();
+
+    // input strings for merkel tree
+    vector<string> inputs = {"1", "2", "3", "4", "5", "6"};
+
+    // hash inputs
+    vector<string> hashes = merkelTree.hashStrings(inputs);
+
+    // pair hashes
+    vector<string> pairedHashes = merkelTree.pairHashes(hashes);
+
+    // ensure hashes are paired as expected
+    assert(hashes[0].append(hashes[1]) == pairedHashes[0]);
+    assert(hashes[2].append(hashes[3]) == pairedHashes[1]);
+    assert(hashes[4].append(hashes[5]) == pairedHashes[2]);
+
+    cout << "test_pairHashes()...Pass!" << endl;
+}
+
 
 int main(void){
     test_hashInputStrings();
+    test_pairHashes();
     return 0;
 }

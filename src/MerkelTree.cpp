@@ -13,11 +13,11 @@ MerkelTree::MerkelTree(){
 }
 
 /**
- * @note hashInputStrings() hashes all inputs (original leaf nodes) input into the merkel tree
+ * @note hashStrings() hashes all string inputs (current leaf nodes) 
  * @param input is a vector of strings containing the data to be hashed
  * @returns vector of hash strings
 */
-vector<string> MerkelTree::hashInputStrings(vector<string> input){
+vector<string> MerkelTree::hashStrings(vector<string> input){
 
     // hash all input strings after converting to binary vectors
     vector<string> hashes;
@@ -26,4 +26,33 @@ vector<string> MerkelTree::hashInputStrings(vector<string> input){
         hashes.push_back(sha256.computeHash(bin));
     }
     return hashes;
+}
+
+/**
+ * @note pairHashes() groups hashes into pairs and appends them for further hashing
+ * @param hashes a vector of pre computed hash outputs to group
+ * @return a vector half the size of the input containing str appended hash pairs
+*/
+vector<string> MerkelTree::pairHashes(vector<string> hashes){
+
+    // group hashes into pairs
+    vector<string> pairedHashes;
+    for (int i=0; i<hashes.size(); i++){ 
+
+        // get first hash in pair
+        string hash = hashes[i];
+
+        // get second hash if exists
+        if (i+1 <= hashes.size()){
+
+            // append first hash to second
+            hash.append(hashes[i+1]);
+            i++;
+        }        
+
+        // push hash pair
+        pairedHashes.push_back(hash);
+    }
+
+    return pairedHashes;
 }
