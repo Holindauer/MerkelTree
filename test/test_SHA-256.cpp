@@ -141,13 +141,10 @@ void test_hashEmptyString() {
     vector<bool> bitVec;
 
     // Compute hash
-    sha256.computeHash(bitVec); // Note: computeHash needs to return the hash string for this to work
+    string computedHash = sha256.computeHash(bitVec); // Note: computeHash needs to return the hash string for this to work
 
     // Known correct hash for an empty string in SHA-256
     string correctHash = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
-
-    // Collect the computed hash
-    string computedHash = sha256.collectDigest();
 
     // Check if the computed hash matches the known correct hash
     if (computedHash != correctHash) {

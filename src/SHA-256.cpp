@@ -6,7 +6,7 @@
  * @note computeHash() fascilitates the processing of each 512 bit chunk of the initial message
  * @param bitVec is a boolean vector representing the message to hash in binary
 */
-void SHA256::computeHash(vector<bool> bitVec) {
+string SHA256::computeHash(vector<bool> bitVec) {
 
     // reset initial hash values
     uint32_t h0 = 0x6a09e667, h1 = 0xbb67ae85, h2 = 0x3c6ef372, h3 = 0xa54ff53a,
@@ -25,7 +25,9 @@ void SHA256::computeHash(vector<bool> bitVec) {
 
     // Output the final hash value (convert to a desired format, e.g., hexadecimal string)
     std::string hashHex = collectDigest(); 
-    std::cout << "Hash: " << hashHex << std::endl;
+    // std::cout << "Hash: " << hashHex << std::endl;
+
+    return hashHex;
 }
 
 /**
@@ -241,5 +243,26 @@ uint32_t SHA256::sigma1(uint32_t x) {
     return rightRotate(17, x) ^ rightRotate(19, x) ^ (x >> 10);
 }
 
+// ! TODO write a test for this
+vector<bool> SHA256::stringToBinary(const std::string& input) {
+    std::vector<bool> binaryRepresentation;
 
+    for (char character : input) {
+        // Convert each character to its ASCII binary representation.
+        // std::bitset<8> represents an 8-bit binary number.
+        std::bitset<8> bits(character);
+        
+        // Add each bit to the vector.
+        for (int i = 0; i < 8; ++i) {
+            binaryRepresentation.push_back(bits[i]);
+        }
+    }
+
+    // Reverse each byte's bits to match the endianness (std::bitset starts from the least significant bit).
+    for (size_t i = 0; i < binaryRepresentation.size(); i += 8) {
+        std::reverse(binaryRepresentation.begin() + i, binaryRepresentation.begin() + i + 8);
+    }
+
+    return binaryRepresentation;
+}
 

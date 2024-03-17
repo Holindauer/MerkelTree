@@ -20,8 +20,8 @@ class SHA256 {
 
         // hash computation
         void processChunk(const uint32_t* chunk);
-        void computeHash(vector<bool> bitVec);
         string collectDigest() const;
+        string computeHash(vector<bool> bitVec);
         
         // bit manipulations for SHA-256 
         uint32_t rightRotate(uint32_t n, uint32_t x);
@@ -31,6 +31,9 @@ class SHA256 {
         uint32_t Sigma1(uint32_t x);
         uint32_t sigma0(uint32_t x);
         uint32_t sigma1(uint32_t x);
+
+        // helper 
+        vector<bool> stringToBinary(const std::string& input);
 
 
     private:

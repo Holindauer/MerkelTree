@@ -9,11 +9,15 @@ LIB_SOURCES=$(wildcard $(SRC_DIR)/*.cpp)
 # Create bin directory if it doesn't exist
 $(shell mkdir -p $(BIN_DIR))
 
-all: test_SHA256
+all: test_SHA256 test_MerkelTree
 
 # Test Target
 test_SHA256: $(TEST_DIR)/test_SHA-256.cpp $(LIB_SOURCES)
 	$(CXX) $(CXXFLAGS) $^ -o $(BIN_DIR)/$(@F) $(LDFLAGS)
+
+test_MerkelTree: $(TEST_DIR)/test_MerkelTree.cpp $(LIB_SOURCES)
+	$(CXX) $(CXXFLAGS) $^ -o $(BIN_DIR)/$(@F) $(LDFLAGS)
+
 
 .PHONY: clean
 

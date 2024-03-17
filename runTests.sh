@@ -16,7 +16,7 @@ echo
 echo "Running All Tests..."
 
 # Define your test binary here
-tests=("test_SHA256")
+tests=("test_SHA256" "test_MerkelTree")
 
 # Directory where binaries are located
 BIN_DIR="bin"

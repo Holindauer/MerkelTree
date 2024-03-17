@@ -10,8 +10,11 @@
 #include <cassert> 
 #include <array>
 #include <sstream>
-#include <iomanip> // for std::setw and std::setfill
+#include <iomanip> 
 #include <algorithm>
+#include <vector>
+#include <string>
+#include <bitset>
 
 // namespace includes
 using std::ifstream;
@@ -26,3 +29,4 @@ using std::endl;
 
 // hpp files
 #include "SHA-256.hpp"
+#include "MerkelTree.hpp"
