@@ -2,195 +2,147 @@
 
 // SHA-256.cpp
 
-// init array of round constants
-const uint32_t SHA256::k[64] = {
-    0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
-    0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
-    0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
-    0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,
-    0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,
-    0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
-    0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
-    0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2
-};
-
 /**
- * @note readFileBits() reads all bits  from a file and stores them in a bit vector.
+ * @note computeHash() fascilitates the processing of each 512 bit chunk of the initial message
+ * @param bitVec is a boolean vector representing the message to hash in binary
 */
-vector<bool> SHA256::readFileBits(const string& fileName) {
+void SHA256::computeHash(vector<bool> bitVec) {
 
-    // open file
-    ifstream file(fileName, ios::binary); 
-    assert(file.good());
+    // reset initial hash values
+    uint32_t h0 = 0x6a09e667, h1 = 0xbb67ae85, h2 = 0x3c6ef372, h3 = 0xa54ff53a,
+             h4 = 0x510e527f, h5 = 0x9b05688c, h6 = 0x1f83d9ab, h7 = 0x5be0cd19;
 
-    vector<bool> bitArr;
-        
-    while (file.good()) {
+    // Pad the message as per SHA-256 requirements
+    pad(bitVec); 
 
-        // Read 64 bytes from the file into a buffer
-        vector<unsigned char> buffer(64); 
-        file.read(reinterpret_cast<char*>(&buffer[0]), buffer.size());
-        
-        // Iterate through the bytes in the buffer
-        for (int i = 0; i < file.gcount(); ++i) {
+    // Convert bit vector to 32-bit word vector
+    vector<uint32_t> messageWords = convertToWords(bitVec); 
 
-            // iterate backwards through the bits of the current byte
-            for (int j = 7; j >= 0; --j) {
-
-                // Push the bits of the current byte onto the bit vector by
-                // shifting the bits to the right and masking with 1
-                bitArr.push_back((buffer[i] >> j) & 1);
-            }
-        }
+    // Process each 512-bit chunk
+    for (size_t i = 0; i < messageWords.size(); i += 16) {
+        processChunk(&messageWords[i]); // <-- ptr to the start of the next 16 32-bit words
     }
 
-     return bitArr; 
+    // Output the final hash value (convert to a desired format, e.g., hexadecimal string)
+    std::string hashHex = collectDigest(); 
+    std::cout << "Hash: " << hashHex << std::endl;
 }
 
 /**
- * @helper bitToByteVector() converts a bit vector (represented as vec of bools) to a byte vector.
+ * @note pad() pads a vector of bits (represented as bools) to a len that is a multiple of 512 bits by 
+ * first appending a single '1' bit, then the amount of zeroes such that the big endian representation 
+ * of the length of the orignal message can be appended to the end of the padded message and the length 
+ * still be a multiple of 512 bits.
+ * @param bitVec a vector of bits representing a vector of bools
 */
-vector<unsigned char> bitToByteVector(const vector<bool>& bitVec) {
+void SHA256::pad(vector<bool>& bitVec) {
 
-    vector<unsigned char> byteVec;
-    unsigned char currentByte = 0; // temp for bit/btye conversion
-
-    // iterate bits in bit vector
-    for (size_t i = 0; i < bitVec.size(); ++i) {
-
-        // if the i'th bit is true, set the corresponding bit to '1' in the current byte
-        if (bitVec[i]) {    
-
-            // (1 << (7 - (i % 8))) calculates how many positions away from the LSB the '1' should be placed in
-            // the current byte. The placement itself is done at that position with the bitwise OR operation.
-            currentByte |= (1 << (7 - (i % 8)));
-        }
-
-        // Every 8 bits, push the current byte to the byte vector and reset
-        if (i % 8 == 7) {
-            byteVec.push_back(currentByte);
-            currentByte = 0; 
-        }
-    }
-
-    // Handle any remaining bits if bitVec.size() is not a multiple of 8
-    if (bitVec.size() % 8 != 0) {
-        byteVec.push_back(currentByte);
-    }
-
-    return byteVec;
-}
-
-/**
- * @helper computeBigEndianBits() computes the big endian representation of a size_t and stores it in a bit vector.
- * @param size The size_t to convert to big endian.
- * @param endianVec The bit vector to store the big endian representation in.
-*/
-void SHA256::computeBigEndian(size_t size, vector<bool>& endianVec) {
-
-    // iterate from MSB, fill endianVec with the bits of 'size'
-    for (int i = 63; i >= 0; --i) {
-
-        // Extract each bit by shifting 'size' right by 'i' positions and isolate the LSB
-        bool bit = (size >> i) & 1;
-
-        // populate bit vector from MSB to LSB
-        endianVec[63 - i] = bit;
-    }
-}
-
-
-/**
- * @note applyPadding() pads a vector of bits (represented as a vector of bools) to a len that is a multiple of 512 bits
-*/
-void SHA256::applyPadding(vector<bool>& bitVec) {
+    // Save original length (in bits)
+    size_t originalLength = bitVec.size();
 
     // Pad with a '1' bit
     bitVec.push_back(true);
 
-    uint padLen = 512 - bitVec.size() - 64; // 64 for the length of the original message
+    // Check if the message is in the critical range between 56 bytes (448 bits) and 64 bytes (512 bits) inclusive
+    // After adding the '1' bit, it checks if there's enough space for the 64-bit length representation.
+    // If not, the message would overflow into a new 512-bit block, requiring an adjustment in the padding calculation.
+    size_t totalLengthWithOneBit = originalLength + 1; // Total length after adding the '1' bit
+    bool needsExtraBlock = totalLengthWithOneBit > (512 - 1 - 64);
 
-    // compute big endian len of bitVec
+    // Calculate padding length, adjusting for an extra block if needed
+    size_t padLen;
+    if (needsExtraBlock) {
+        // Calculate extra padding to push length into new block
+        padLen = (1024 - 1 - 64 - originalLength) % 512;
+    } else {
+        // Normal padding calculation
+        padLen = (512 - 1 - 64 - originalLength) % 512;
+    }
+
+    // Pad with '0's
+    for (size_t i = 0; i < padLen; ++i) {
+        bitVec.push_back(false);
+    }
+
+    // Compute big endian representation of the original length (in bits)
     vector<bool> lenBitsBigEndian(64, false);
-    computeBigEndian(bitVec.size(), lenBitsBigEndian);
+    for (int i = 63; i >= 0; --i) {
+        lenBitsBigEndian[i] = (originalLength % 2) == 1;
+        originalLength /= 2;
+    }
 
-    // pad with 0's
-    for (uint i = 0; i < padLen; ++i) { bitVec.push_back(false); }
-
-    // append the big endian len of bitVec
+    // Append the big endian length of the original message
     bitVec.insert(bitVec.end(), lenBitsBigEndian.begin(), lenBitsBigEndian.end());
 
+    // Ensure the total length is now a multiple of 512 bits
     assert(bitVec.size() % 512 == 0);
 }
 
-
 /**
- * @note hashBytes() applies the SHA-256 hashing algorithm to a vector of bytes. The bytes are padded if the length
- * of the byte vector is not a multiple of 64. 
+ * @note convertToWords() converts a vector of bits (represented as bools) to a vector of 32-bit words.
 */
-void SHA256::hashBits(vector<bool>& bitVec){
+vector<uint32_t> SHA256::convertToWords(const vector<bool>& bitVec) {
 
-    // check if arr len is a multple of 64x
-    if (bitVec.size() % 64 != 0) {
-        applyPadding(bitVec);
+    vector<uint32_t> words;
+    uint32_t currentWord = 0;
+
+    // Iterate through the bitVec 32 bits at a time
+    for (size_t i = 0; i < bitVec.size(); i++) {
+
+        // Set the i-th bit of currentWord by xor-ing it with the i-th bit of bitVec
+        // i'th bit is computed as 31 - (i % 32) because we are iterating from left to right
+        currentWord |= (uint32_t(bitVec[i]) << (31 - (i % 32)));
+
+        // Every 32 bits, push the currentWord to words and reset currentWord
+        if ((i % 32) == 31) {
+            words.push_back(currentWord);
+            currentWord = 0;
+        }
     }
-    
-    // convert bit vector to byte vector
-    vector<unsigned char> byteVec = bitToByteVector(bitVec);
 
-    // iterate through the byte vector in 512-bit blocks
-    for (size_t i = 0; i < byteVec.size(); i += 64) {
+    // Handling the case where the bitVec's size isn't a multiple of 32
+    // If there are remaining bits, they are already correctly positioned in currentWord
+    if (bitVec.size() % 32 != 0) {
+        words.push_back(currentWord);
+    }
 
-        // process each 512-bit block
-        processBlock(vector<unsigned char>(byteVec.begin() + i, byteVec.begin() + i + 64));
-    
-
+    return words;
 }
 
-
 /**
- * @note processBlock() applies the 'rolling hash function' to a 512-bit block of data. The block is divided into 16
- * 32-bit words, which are then extended into 64 32-bit words using a message schedule array. The extended words are
- * then used to update the hash value through a series of bitwise operations and additions. The final hash value is
- * then used to update the current hash value. 
- * @
+ * @note processChunk processes each 512 bit chunk of the initial input bit vector, updating
+ * the class variables h0-h7
 */
-void SHA256::processBlock(const std::vector<unsigned char>& byteBlock) {
-    assert(byteBlock.size() == 64); // Ensure the block is 512 bits (64 bytes)
+void SHA256::processChunk(const uint32_t* chunk) {
 
-    // Init message schedule array
-    std::array<uint32_t, 64> msgSched = {0};
+    // @note w is the msg schedule array. rest are working variables
+    uint32_t w[64], a, b, c, d, e, f, g, h, temp1, temp2, S0, S1;
 
-    // Copy the first 16 words directly from the block into the message schedule array
-    for (size_t i = 0; i < 16; ++i) {
-
-        // Big endian format computed by shifting left by 24, 16, 8, 0 then mask with 0xFF (0b11111111)
-        msgSched[i] = (byteBlock[i*4] << 24) | (byteBlock[i*4 + 1] << 16) | (byteBlock[i*4 + 2] << 8) | (byteBlock[i*4 + 3]);
+    // Initialize the first 16 words in the array W[0..15]
+    for (int i = 0; i < 16; ++i) {
+        w[i] = chunk[i];
     }
 
     // Extend the first 16 words into the remaining 48 words of the message schedule array
-    for (size_t i = 16; i < 64; ++i) {
-        uint32_t s0 = sigma0(msgSched[i-15]);
-        uint32_t s1 = sigma1(msgSched[i-2]);
-        msgSched[i] = msgSched[i-16] + s0 + msgSched[i-7] + s1;
+    for (int i = 16; i < 64; ++i) {
+        uint32_t s0 = sigma0(w[i-15]);
+        uint32_t s1 = sigma1(w[i-2]);
+        w[i] = w[i-16] + s0 + w[i-7] + s1;
     }
 
-    // Initialize working variables with current hash value
-    uint32_t a = _h[0], b = _h[1], c = _h[2], d = _h[3], 
-             e = _h[4], f = _h[5], g = _h[6], h = _h[7];
+    // Initialize working variables to current hash value
+    a = h0; b = h1; c = h2; d = h3;
+    e = h4; f = h5; g = h6; h = h7;
 
     // Compression function main loop
-    for (size_t i = 0; i < 64; ++i) {
-
-        // Compute next working variables' state
-        uint32_t S1 = Sigma1(e);
+    for (int i = 0; i < 64; ++i) {
+        S1 = Sigma1(e);
         uint32_t ch = Choice(e, f, g);
-        uint32_t temp1 = h + S1 + ch + k[i] + msgSched[i];
-        uint32_t S0 = Sigma0(a);
+        temp1 = h + S1 + ch + k[i] + w[i];
+        S0 = Sigma0(a);
         uint32_t maj = Majority(a, b, c);
-        uint32_t temp2 = S0 + maj;
+        temp2 = S0 + maj;
 
-        // Update the working variables
         h = g;
         g = f;
         f = e;
@@ -202,28 +154,92 @@ void SHA256::processBlock(const std::vector<unsigned char>& byteBlock) {
     }
 
     // Add the compressed chunk to the current hash value
-    _h[0] += a; _h[1] += b; _h[2] += c; _h[3] += d;
-    _h[4] += e; _h[5] += f; _h[6] += g; _h[7] += h;
+    h0 += a; h1 += b; h2 += c; h3 += d;
+    h4 += e; h5 += f; h6 += g; h7 += h;
 }
 
+
 /**
- * @note getDigest() returns the final hash value as a string of hexadecimal 
- * characters by combining the 8 32-bit words of the hash value.
+ * @note collectDigest() returns appends the final hash values into a hexadecimal string
 */
-string SHA256::getDigest() const {
+string SHA256::collectDigest() const {
 
     std::ostringstream result;
+    
+    // collect current hashg vals into array for iteration
+    uint32_t hashVals[8] = {h0, h1, h2, h3, h4, h5, h6, h7};
+    for(int i = 0; i < 8; i++) {
 
-    for(int i = 0; i < 8; i++) { // Loop through the final hash values
-
-        // Convert the hash value to a hex string and append it to the result
-        // (A hex string is a string representation of a number in base 16.)
-        result << std::hex << std::setfill('0') << std::setw(8) << _h[i];
+        // append hash values into hexadecimal string
+        result << std::hex << std::setfill('0') << std::setw(8) << hashVals[i];
     }
 
     return result.str();
 }
 
+/**
+ * @note A right rotation bit manipulation shifts bits to the right a set number of times.
+ * to which the bits that "fall off" the right end are reinserted at the left.
+ * @param n The number of bits to rotate.
+ * @param x The value to rotate.
+ */
+uint32_t SHA256::rightRotate(uint32_t n, uint32_t x) {
+    return (x >> n) | (x << (32 - n));
+}
+
+/**
+ * @note  The Choice function selects between two inputs based on the value of a third input.
+ * It operates bit by bit: for each bit position, if the bit in x is 1, it selects the 
+ * corresponding bit from y; otherwise, it chooses the bit from z.
+*/
+uint32_t SHA256::Choice(uint32_t x, uint32_t y, uint32_t z) {
+    return (x & y) ^ (~x & z);
+}
+
+/**
+ * @note The Majority function works by considering the bits of three inputs at each position
+ * and outputs the majority value of the three for each bit position. If at least two of the 
+ * three bits are 1, the result is 1; otherwise, it's 0. and outputs the majority value of the
+ * three for each bit position. If at least two of the three bits are 1, the result is 1; 
+ * otherwise, it's 0.
+*/
+uint32_t SHA256::Majority(uint32_t x, uint32_t y, uint32_t z) {
+    return (x & y) ^ (x & z) ^ (y & z);
+}
+
+/**
+ * @note Sigma0 is a bit manipulation function that operates on 32-bit words and returns a new 32-bit word.
+ * It is used in the SHA-256 hash function. Sigma0 uses 2, 13, and 22 bit rotations to manipulate the input.
+*/
+uint32_t SHA256::Sigma0(uint32_t x) {
+    return rightRotate(2, x) ^ rightRotate(13, x) ^ rightRotate(22, x);
+}
+
+/**
+ * @note Sigma1 is a bit manipulation function that operates on 32-bit words and returns a new 32-bit word.
+ * It is used in the SHA-256 hash function. Sigma1 uses 6, 11, and 25 bit rotations to manipulate the input.
+*/
+uint32_t SHA256::Sigma1(uint32_t x) {
+    return rightRotate(6, x) ^ rightRotate(11, x) ^ rightRotate(25, x);
+}
+
+/**
+ * @note sigma0 is a bit manipulation function that operates on 32-bit words and returns a new 32-bit word.
+ * It is used in the SHA-256 hash function. sigma0 uses 7, 18, and 3 bit rotations to manipulate the input.
+ * The result is then XORed with the right shift of x by 3.
+*/
+uint32_t SHA256::sigma0(uint32_t x) {
+    return rightRotate(7, x) ^ rightRotate(18, x) ^ (x >> 3);
+}
+
+/**
+ * @note sigma1 is a bit manipulation function that operates on 32-bit words and returns a new 32-bit word.
+ * It is used in the SHA-256 hash function. sigma1 uses 17, 19, and 10 bit rotations to manipulate the input.
+ * The result is then XORed with the right shift of x by 10.
+*/
+uint32_t SHA256::sigma1(uint32_t x) {
+    return rightRotate(17, x) ^ rightRotate(19, x) ^ (x >> 10);
+}
 
 
 

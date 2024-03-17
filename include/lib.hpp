@@ -11,11 +11,13 @@
 #include <array>
 #include <sstream>
 #include <iomanip> // for std::setw and std::setfill
+#include <algorithm>
 
 // namespace includes
 using std::ifstream;
 using std::ofstream;
 using std::vector;
+using std::array;
 using std::string;
 using std::ios;
 using std::cout;

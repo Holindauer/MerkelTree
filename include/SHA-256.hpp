@@ -12,107 +12,48 @@ class SHA256 {
     */
 
     public:
-
-        // Constructor --- Destructor
         SHA256() = default;
-        ~SHA256() = default;
 
-        // IO
-        vector<bool> SHA256::readFileBits(const string& fileName);
+        // pre-processing
+        void pad(vector<bool>& bitVec);
+        vector<uint32_t> convertToWords(const vector<bool>& bitVec);
 
-        // Preprocessing
-        vector<unsigned char> bitToByteVector(const vector<bool>& bitVec);
-        void SHA256::computeBigEndian(size_t size, vector<bool>& bitVec);
-        void SHA256::applyPadding(vector<bool>& byteArr);
-
-        // Hash Computation
-        void SHA256::hashBits(vector<bool>& bitVec);
-        void SHA256::processBlock(const std::vector<unsigned char>& byteBlock);
-        string SHA256::getDigest() const;
-
+        // hash computation
+        void processChunk(const uint32_t* chunk);
+        void computeHash(vector<bool> bitVec);
+        string collectDigest() const;
         
         // bit manipulations for SHA-256 
-        /**
-         * @note A right rotation bit manipulation shifts bits to the right a set number of times.
-         * to which the bits that "fall off" the right end are reinserted at the left.
-         * @param n The number of bits to rotate.
-         * @param x The value to rotate.
-        */
-        static inline uint32_t rightRotate(uint32_t n, uint32_t x) {
-            return (x >> n) | (x << (32 - n));
-        }
-
-        /**
-         * @note  The Choice function selects between two inputs based on the value of a third input.
-         * It operates bit by bit: for each bit position, if the bit in x is 1, it selects the 
-         * corresponding bit from y; otherwise, it chooses the bit from z.
-        */
-        static inline uint32_t Choice(uint32_t x, uint32_t y, uint32_t z) {
-            return (x & y) ^ (~x & z);
-        }
-
-        /**
-         * @note The Majority function works by considering the bits of three inputs at each position
-         * and outputs the majority value of the three for each bit position. If at least two of the 
-         * three bits are 1, the result is 1; otherwise, it's 0. and outputs the majority value of the
-         * three for each bit position. If at least two of the three bits are 1, the result is 1; 
-         * otherwise, it's 0.
-        */
-        static inline uint32_t Majority(uint32_t x, uint32_t y, uint32_t z) {
-            return (x & y) ^ (x & z) ^ (y & z);
-        }
-
-        /**
-         * @note Sigma0 is a bit manipulation function that operates on 32-bit words and returns a new 32-bit word.
-         * It is used in the SHA-256 hash function. Sigma0 uses 2, 13, and 22 bit rotations to manipulate the input.
-        */
-        static inline uint32_t Sigma0(uint32_t x) {
-            return rightRotate(2, x) ^ rightRotate(13, x) ^ rightRotate(22, x);
-        }
-
-        /**
-         * @note Sigma1 is a bit manipulation function that operates on 32-bit words and returns a new 32-bit word.
-         * It is used in the SHA-256 hash function. Sigma1 uses 6, 11, and 25 bit rotations to manipulate the input.
-        */
-        static inline uint32_t Sigma1(uint32_t x) {
-            return rightRotate(6, x) ^ rightRotate(11, x) ^ rightRotate(25, x);
-        }
-
-        /**
-         * @note sigma0 is a bit manipulation function that operates on 32-bit words and returns a new 32-bit word.
-         * It is used in the SHA-256 hash function. sigma0 uses 7, 18, and 3 bit rotations to manipulate the input.
-         * The result is then XORed with the right shift of x by 3.
-        */
-        static inline uint32_t sigma0(uint32_t x) {
-            return rightRotate(7, x) ^ rightRotate(18, x) ^ (x >> 3);
-        }
-
-        /**
-         * @note sigma1 is a bit manipulation function that operates on 32-bit words and returns a new 32-bit word.
-         * It is used in the SHA-256 hash function. sigma1 uses 17, 19, and 10 bit rotations to manipulate the input.
-         * The result is then XORed with the right shift of x by 10.
-        */
-        static inline uint32_t sigma1(uint32_t x) {
-            return rightRotate(17, x) ^ rightRotate(19, x) ^ (x >> 10);
-        }
+        uint32_t rightRotate(uint32_t n, uint32_t x);
+        uint32_t Choice(uint32_t x, uint32_t y, uint32_t z);
+        uint32_t Majority(uint32_t x, uint32_t y, uint32_t z);
+        uint32_t Sigma0(uint32_t x);
+        uint32_t Sigma1(uint32_t x);
+        uint32_t sigma0(uint32_t x);
+        uint32_t sigma1(uint32_t x);
 
 
     private:
 
         // initial hash values: (first 32 bits of the fractional parts of the square roots of the first 8 primes 2..19):
-            const uint32_t h0 = 0x6a09e667;
-            const uint32_t h1 = 0xbb67ae85;
-            const uint32_t h2 = 0x3c6ef372;
-            const uint32_t h3 = 0xa54ff53a;
-            const uint32_t h4 = 0x510e527f;
-            const uint32_t h5 = 0x9b05688c;
-            const uint32_t h6 = 0x1f83d9ab;
-            const uint32_t h7 = 0x5be0cd19;
+        uint32_t h0 = 0x6a09e667;
+        uint32_t h1 = 0xbb67ae85;
+        uint32_t h2 = 0x3c6ef372;
+        uint32_t h3 = 0xa54ff53a;
+        uint32_t h4 = 0x510e527f;
+        uint32_t h5 = 0x9b05688c;
+        uint32_t h6 = 0x1f83d9ab;
+        uint32_t h7 = 0x5be0cd19;
 
-            // hash values (non constant, for use in the hash computation)
-            uint32_t _h[8] = {h0, h1, h2, h3, h4, h5, h6, h7};
-
-            // array of round constants (initialized outside class def)
-            static const uint32_t k[64];
+        // init array of round constants
+        static constexpr array<uint32_t, 64> k {
+            0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
+            0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
+            0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
+            0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,
+            0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,
+            0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
+            0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
+            0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2
+        };
 };
-
