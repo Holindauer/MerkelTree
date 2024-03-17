@@ -30,7 +30,7 @@ vector<string> MerkelTree::hashStrings(vector<string> input){
 
 /**
  * @note pairHashes() groups hashes into pairs and appends them for further hashing
- * @param hashes a vector of pre computed hash outputs to group
+ * @param hashes a vector of pre computed hash outputs to group up
  * @return a vector half the size of the input containing str appended hash pairs
 */
 vector<string> MerkelTree::pairHashes(vector<string> hashes){
@@ -55,4 +55,27 @@ vector<string> MerkelTree::pairHashes(vector<string> hashes){
     }
 
     return pairedHashes;
+}
+
+/**
+ * @note assembleTree() creates computes a merkel tree from a vector of input strings
+ * @dev by default, the nodes vector is set to nullptr so non recursive calls do not need 
+ * to specify an argument.
+*/
+string MerkelTree::assembleTree(vector<string> input){
+
+    // hash inputs and pair
+    vector<string> hashes = hashStrings(input);
+    vector<string> hashPairs = pairHashes(hashes);
+
+    // hash pairs until root node is established
+    while (hashPairs.size() != 1){
+        
+        // hash together hash pairs and further pair them
+        hashes = hashStrings(hashPairs);
+        hashPairs = pairHashes(hashes);
+    }
+
+    // hash the final concatenation
+    return hashStrings(hashPairs)[0];    
 }

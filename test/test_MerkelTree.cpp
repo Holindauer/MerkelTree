@@ -53,9 +53,26 @@ void test_pairHashes(){
     cout << "test_pairHashes()...Pass!" << endl;
 }
 
+/**
+ * @test test_assembleTree() tests to make sure that the assembleTree function is able to 
+ * bring a collection of input strings to a single hash via the assembleTree() method
+ * 
+*/
+void test_assembleTree(){
+
+    MerkelTree merkelTree = MerkelTree();
+
+    vector<string> inputs = {"1", "2", "3", "4", "5", "6", "7", "8", "9"};
+
+    string rootHash = merkelTree.assembleTree(inputs);
+
+    cout << "test_assembleTree()...PASS!" << endl;
+}
+
 
 int main(void){
     test_hashInputStrings();
     test_pairHashes();
+    test_assembleTree();
     return 0;
 }

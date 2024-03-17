@@ -1,5 +1,18 @@
 #pragma once
 
+// tree node 
+typedef struct node{
+            
+    // hash data
+    string inputHash1;
+    string inputHash2;
+    string combinedHash;
+
+    // relative nodes in tree
+    struct node** ancestors;
+
+}TreeNode;
+
 class MerkelTree{
 
     public:
@@ -9,19 +22,8 @@ class MerkelTree{
         SHA256 sha256;
 
         // merkel tree funcs
-        vector<string> hashStrings(vector<string> inputMessages);
+        vector<string> hashStrings(vector<string> input);
         vector<string> pairHashes(vector<string> hashes);
+        string assembleTree(vector<string> input);
 
-
-        // tree node 
-        typedef struct node{
-
-            string hash1;
-            string hash2;
-
-            struct node** ancestsors;
-            struct node* up;
-        }Node;
-
-    private:
 };
