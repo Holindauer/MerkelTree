@@ -4,13 +4,10 @@
 typedef struct node{
             
     // hash data
-    string inputHash1;
-    string inputHash2;
-    string combinedHash;
+    string hash;
 
     // relative nodes in tree
-    struct node** ancestors;
-
+    struct node* ancestors[2];
 }TreeNode;
 
 class MerkelTree{
@@ -23,7 +20,8 @@ class MerkelTree{
 
         // merkel tree funcs
         vector<string> hashStrings(vector<string> input);
-        vector<string> pairHashes(vector<string> hashes);
-        string assembleTree(vector<string> input);
+        string computeRootHash(vector<string> input);
+        TreeNode* newTreeNode(TreeNode* inputHash1, TreeNode* inputHash2);
+        TreeNode* assembleTree(vector<string> input);
 
 };

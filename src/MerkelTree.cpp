@@ -1,9 +1,17 @@
 #include "lib.hpp"
 
-// the merkel tree will start with hashing all strings input to the merkel tree. 
-// Then pairs of hashes will be formed and appened together. These will be further 
-// hashed until a single hash is formed. This hash will be the root of the merkel tree.
-
+/**
+ * Merkel Tree Protocol
+ * 
+ * Step 1:
+ * The assembly of the merkel tree requires that the inital string inputs are all hashed. Then
+ * these hashes must be grouped into pairs and formed into single strings by concatenating each
+ * hash string together. 
+ * 
+ * Step 2:
+ * Then until the final route node is created, these hash pair concatenations must themselves be 
+ * hashed, and paired.
+*/
 
 /**
  * @note constructor initializes SHA256 class as hash func for merkel tree
@@ -29,53 +37,82 @@ vector<string> MerkelTree::hashStrings(vector<string> input){
 }
 
 /**
- * @note pairHashes() groups hashes into pairs and appends them for further hashing
- * @param hashes a vector of pre computed hash outputs to group up
- * @return a vector half the size of the input containing str appended hash pairs
+ * @note newTreeNode() allocates memory for a new tree node and computes its hash from the 
+ * concatenated hashes of its ancestors.
+ * @param ancestor1 is the first ancestor of the new node
+ * @param ancestor2 is the second ancestor of the new node
 */
-vector<string> MerkelTree::pairHashes(vector<string> hashes){
+TreeNode* MerkelTree::newTreeNode(TreeNode* ancestor1, TreeNode* ancestor2){
 
-    // group hashes into pairs
-    vector<string> pairedHashes;
-    for (int i=0; i<hashes.size(); i++){ 
+    // allocate mem for new node
+    TreeNode* treeNode = new TreeNode;
 
-        // get first hash in pair
-        string hash = hashes[i];
+    // cat hashes if they exist
+    string hashedPair = "";
+    if (ancestor1 != nullptr) { hashedPair.append(ancestor1->hash); }
+    if (ancestor2 != nullptr) { hashedPair.append(ancestor2->hash); }
 
-        // get second hash if exists
-        if (i+1 <= hashes.size()){
+    // hash catted hashes, and set into treeNode
+    treeNode->hash = sha256.computeHash(sha256.stringToBinary(hashedPair));
 
-            // append first hash to second
-            hash.append(hashes[i+1]);
-            i++;
-        }        
+    // set ancestors
+    treeNode->ancestors[0] = ancestor1;
+    treeNode->ancestors[1] = ancestor2;
 
-        // push hash pair
-        pairedHashes.push_back(hash);
-    }
+    return treeNode;
+}   
 
-    return pairedHashes;
-}
 
 /**
- * @note assembleTree() creates computes a merkel tree from a vector of input strings
- * @dev by default, the nodes vector is set to nullptr so non recursive calls do not need 
- * to specify an argument.
-*/
-string MerkelTree::assembleTree(vector<string> input){
+ * @note assembleTree() assembles a merkel tree out of treeNode structs by first hashing all string inputs. Then
+ * these hashes are packaged within dynamically allocated treeNode structs, forming the base layer of the tree. 
+ * the binary tree is then from the lowest level until the root node is formed.
+ * */
+TreeNode* MerkelTree::assembleTree(vector<string> input){
+    assert(input.size() > 0);
 
-    // hash inputs and pair
+    // compute initial hashes from input vector
     vector<string> hashes = hashStrings(input);
-    vector<string> hashPairs = pairHashes(hashes);
 
-    // hash pairs until root node is established
-    while (hashPairs.size() != 1){
-        
-        // hash together hash pairs and further pair them
-        hashes = hashStrings(hashPairs);
-        hashPairs = pairHashes(hashes);
+    // create base layer of the tree w/ hashes of original str data
+    vector<TreeNode*> nodesVec;
+    for (int i=0; i<hashes.size(); i++){
+
+        // allocate mem for tree node without ancestors and set hash
+        TreeNode* node = newTreeNode(nullptr, nullptr);
+
+        // set hash of nodes manually
+        node->hash = hashes[i];
+        nodesVec.push_back(node);
     }
 
-    // hash the final concatenation
-    return hashStrings(hashPairs)[0];    
+    // assemble tree from base up until root node established
+    while (nodesVec.size() != 1){
+        
+        // build next layer of tree, hashing concatted hashes of paired nodes 
+        vector<TreeNode*> tempNodesVec;
+        for (int i=0; i<nodesVec.size(); i++){
+            
+            // new tree node, func sets cat hash within node. 
+            TreeNode* newNode;
+            if (i+1 < nodesVec.size()){ // handle even num nodes
+                newNode = newTreeNode(nodesVec[i], nodesVec[i+1]); 
+                i++; // increment for two nodes added
+            }
+            else { // handle odd num nodes
+                newNode = newTreeNode(nodesVec[i], nullptr);
+            }
+
+            // push to temp vec
+            tempNodesVec.push_back(newNode);
+        }
+
+        // reset nodesVec for next iter
+        nodesVec.clear();
+        for(int i=0; i<tempNodesVec.size(); i++){
+            nodesVec.push_back(tempNodesVec[i]);
+        }
+    }
+
+    return nodesVec[0]; // root node
 }
