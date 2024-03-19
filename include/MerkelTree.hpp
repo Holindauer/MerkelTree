@@ -10,15 +10,15 @@ typedef struct node{
     struct node* ancestors[2];
 }TreeNode;
 
-class MerkelTree{
+class MerkleTree{
 
     public:
-        MerkelTree();   
+        MerkleTree();   
 
         // hash function
         SHA256 sha256;
 
-        // merkel tree funcs
+        // merkle tree funcs
         vector<string> hashStrings(vector<string> input);
         string computeRootHash(vector<string> input);
         TreeNode* newTreeNode(TreeNode* inputHash1, TreeNode* inputHash2);

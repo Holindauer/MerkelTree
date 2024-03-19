@@ -1,10 +1,10 @@
 #include "lib.hpp"
 
 /**
- * Merkel Tree Protocol
+ * Merkle Tree Protocol
  * 
  * Step 1:
- * The assembly of the merkel tree requires that the inital string inputs are all hashed. Then
+ * The assembly of the merkle tree requires that the inital string inputs are all hashed. Then
  * these hashes must be grouped into pairs and formed into single strings by concatenating each
  * hash string together. 
  * 
@@ -14,9 +14,9 @@
 */
 
 /**
- * @note constructor initializes SHA256 class as hash func for merkel tree
+ * @note constructor initializes SHA256 class as hash func for merkle tree
 */
-MerkelTree::MerkelTree(){
+MerkleTree::MerkleTree(){
     sha256 = SHA256();
 }
 
@@ -25,7 +25,7 @@ MerkelTree::MerkelTree(){
  * @param input is a vector of strings containing the data to be hashed
  * @returns vector of hash strings
 */
-vector<string> MerkelTree::hashStrings(vector<string> input){
+vector<string> MerkleTree::hashStrings(vector<string> input){
 
     // hash all input strings after converting to binary vectors
     vector<string> hashes;
@@ -42,7 +42,7 @@ vector<string> MerkelTree::hashStrings(vector<string> input){
  * @param ancestor1 is the first ancestor of the new node
  * @param ancestor2 is the second ancestor of the new node
 */
-TreeNode* MerkelTree::newTreeNode(TreeNode* ancestor1, TreeNode* ancestor2){
+TreeNode* MerkleTree::newTreeNode(TreeNode* ancestor1, TreeNode* ancestor2){
 
     // allocate mem for new node
     TreeNode* treeNode = new TreeNode;
@@ -66,7 +66,7 @@ TreeNode* MerkelTree::newTreeNode(TreeNode* ancestor1, TreeNode* ancestor2){
  * @freeTree recursively deallocates all nodes in the tree from the root down
  * @param root is a ptr to a ptr to the root node
 */
-void MerkelTree::freeTree(TreeNode** root){ 
+void MerkleTree::freeTree(TreeNode** root){ 
 
     // base case
     if (*root == nullptr){
@@ -87,11 +87,11 @@ void MerkelTree::freeTree(TreeNode** root){
 }
 
 /**
- * @note assembleTree() assembles a merkel tree out of treeNode structs by first hashing all string inputs. Then
+ * @note assembleTree() assembles a merkle tree out of treeNode structs by first hashing all string inputs. Then
  * these hashes are packaged within dynamically allocated treeNode structs, forming the base layer of the tree. 
  * the binary tree is then from the lowest level until the root node is formed.
  * */
-TreeNode* MerkelTree::assembleTree(vector<string> input){
+TreeNode* MerkleTree::assembleTree(vector<string> input){
     assert(input.size() > 0);
 
     // compute initial hashes from input vector
