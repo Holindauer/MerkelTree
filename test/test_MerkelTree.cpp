@@ -9,7 +9,7 @@
 void test_hashInputStrings(void){  
 
     // instantiate merkel tree and sha classes
-    MerkelTree merkelTree = MerkelTree();
+    MerkleTree merkelTree = MerkleTree();
     SHA256 sha256 = SHA256();
 
     // input strings for merkel tree
@@ -33,7 +33,7 @@ void test_hashInputStrings(void){
  */
 void test_assembleTree(){
 
-    MerkelTree merkelTree = MerkelTree();
+    MerkleTree merkelTree = MerkleTree();
 
     vector<string> inputs = {"1", "2", "3", "4", "5", "6", "7", "8", "9"};
 

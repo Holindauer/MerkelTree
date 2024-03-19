@@ -18,7 +18,7 @@ class MerkleTree{
         // hash function
         SHA256 sha256;
 
-        // merkle tree funcs
+        // merkle -tree funcs
         vector<string> hashStrings(vector<string> input);
         string computeRootHash(vector<string> input);
         TreeNode* newTreeNode(TreeNode* inputHash1, TreeNode* inputHash2);
