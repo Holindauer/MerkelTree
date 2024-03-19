@@ -23,5 +23,6 @@ class MerkelTree{
         string computeRootHash(vector<string> input);
         TreeNode* newTreeNode(TreeNode* inputHash1, TreeNode* inputHash2);
         TreeNode* assembleTree(vector<string> input);
+        void freeTree(TreeNode** root);
 
 };

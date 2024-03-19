@@ -39,7 +39,11 @@ void test_assembleTree(){
 
     // Assemble the tree
     TreeNode* root = merkelTree.assembleTree(inputs);
-    
+
+    // cleanup
+    merkelTree.freeTree(&root);
+    assert(root == nullptr);
+
 
     cout << "test_assembleTree()...PASS!" << endl;
 }

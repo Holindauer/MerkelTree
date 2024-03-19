@@ -62,6 +62,29 @@ TreeNode* MerkelTree::newTreeNode(TreeNode* ancestor1, TreeNode* ancestor2){
     return treeNode;
 }   
 
+/**
+ * @freeTree recursively deallocates all nodes in the tree from the root down
+ * @param root is a ptr to a ptr to the root node
+*/
+void MerkelTree::freeTree(TreeNode** root){ 
+
+    // base case
+    if (*root == nullptr){
+        return;
+    }
+
+    // Recursively free remaining subtrees
+    if ((*root)->ancestors[0] != nullptr){
+        freeTree(&((*root)->ancestors[0]));
+    }
+    if ((*root)->ancestors[1] != nullptr){
+        freeTree(&((*root)->ancestors[1]));
+    }
+
+    // deallocate the current node, set to nullptr
+    delete *root;
+    *root = nullptr;        
+}
 
 /**
  * @note assembleTree() assembles a merkel tree out of treeNode structs by first hashing all string inputs. Then
